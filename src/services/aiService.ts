@@ -56,7 +56,7 @@ Respond in this exact JSON format:
 Only recommend real games that exist on Steam. Make sure the descriptions are engaging and explain why each game fits the user's request.`;
 
       const aiResponse = await this.callAI(prompt);
-      const parsedResponse: AIResponse = JSON.parse(aiResponse);
+      const parsedResponse: AIResponse = this.parseAIResponse(aiResponse);
 
       // Convert AI response to Game objects with logos
       const games: Game[] = await Promise.all(
@@ -78,6 +78,84 @@ Only recommend real games that exist on Steam. Make sure the descriptions are en
       console.error('Error searching games:', error);
       throw error;
     }
+  }
+
+  private parseAIResponse(response: string): AIResponse {
+    try {
+      // First, try to parse as-is
+      return JSON.parse(response);
+    } catch (error) {
+      try {
+        // Try to extract JSON from markdown code blocks
+        const jsonMatch = response.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[1]);
+        }
+
+        // Try to find JSON object in the response
+        const jsonStart = response.indexOf('{');
+        const jsonEnd = response.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          const jsonStr = response.substring(jsonStart, jsonEnd + 1);
+          return JSON.parse(jsonStr);
+        }
+
+        // If all else fails, try to create a structured response from text
+        return this.createFallbackResponse(response);
+      } catch (fallbackError) {
+        console.error('Failed to parse AI response:', response);
+        throw new Error('AI response could not be parsed. Please try again.');
+      }
+    }
+  }
+
+  private createFallbackResponse(response: string): AIResponse {
+    // Try to extract game information from unstructured text
+    const games: Array<{name: string; description: string; genres: string[]}> = [];
+    
+    // Split by common delimiters and look for game patterns
+    const lines = response.split(/\n+/);
+    let currentGame: any = null;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+      
+      // Look for game names (often numbered or have special formatting)
+      if (trimmedLine.match(/^\d+\.?\s+/) || trimmedLine.match(/^[*-]\s+/) || trimmedLine.includes('Game:') || trimmedLine.includes('Title:')) {
+        if (currentGame) {
+          games.push(currentGame);
+        }
+        currentGame = {
+          name: trimmedLine.replace(/^\d+\.?\s+|^[*-]\s+|Game:\s*|Title:\s*/i, '').trim(),
+          description: '',
+          genres: []
+        };
+      } else if (currentGame && (trimmedLine.includes('Description:') || trimmedLine.includes('About:'))) {
+        currentGame.description = trimmedLine.replace(/Description:\s*|About:\s*/i, '').trim();
+      } else if (currentGame && (trimmedLine.includes('Genre') || trimmedLine.includes('Tag'))) {
+        const genreText = trimmedLine.replace(/Genre[s]?:\s*|Tag[s]?:\s*/i, '').trim();
+        currentGame.genres = genreText.split(/[,;]/).map((g: string) => g.trim()).filter((g: string) => g);
+      } else if (currentGame && !currentGame.description && trimmedLine.length > 20) {
+        // Assume longer lines are descriptions
+        currentGame.description = trimmedLine;
+      }
+    }
+    
+    if (currentGame) {
+      games.push(currentGame);
+    }
+    
+    // Ensure we have at least some games, create fallback if needed
+    if (games.length === 0) {
+      games.push({
+        name: 'Steam Game Recommendation',
+        description: 'Unable to parse specific game recommendations from AI response. Please try rephrasing your query.',
+        genres: ['Adventure']
+      });
+    }
+    
+    return { games: games.slice(0, 3) }; // Limit to 3 games
   }
 
   private async callAI(prompt: string): Promise<string> {
