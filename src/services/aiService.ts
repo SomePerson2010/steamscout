@@ -118,7 +118,7 @@ Only recommend real games that exist on Steam. Make sure the descriptions are en
   }
 
   private async callGemini(prompt: string): Promise<string> {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
