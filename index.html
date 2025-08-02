@@ -1,13 +1,198 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Steam Game Recommendation Chatbot Website</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteamScout - AI-Powered Game Recommendations</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234F46E5' stroke-width='2'><rect width='14' height='20' x='5' y='2' rx='2' ry='2'/><path d='M12 18h.01'/></svg>">
+</head>
+<body>
+    <!-- API Key Modal -->
+    <div id="apiModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/>
+                    <path d="m21 2-1 1"/>
+                    <path d="M5.5 7.5 8 10l-2.5 2.5L3 10l2.5-2.5Z"/>
+                    <path d="m15 5 4 4"/>
+                    <path d="m9 11 4 4"/>
+                    <path d="m5 19 4-4"/>
+                    <path d="m19 15-4 4"/>
+                </svg>
+                <h2>API Key Required</h2>
+            </div>
+            
+            <p class="modal-description">
+                To use the AI-powered game recommendations, please enter your API key from either OpenAI or Google Gemini.
+            </p>
+
+            <form id="apiForm">
+                <div class="provider-selection">
+                    <label class="provider-label">Choose AI Provider</label>
+                    <div class="provider-buttons">
+                        <button type="button" class="provider-btn active" data-provider="openai">OpenAI</button>
+                        <button type="button" class="provider-btn" data-provider="gemini">Google Gemini</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="apiKeyInput">API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="apiKeyInput" placeholder="Enter your OpenAI API key" required>
+                        <button type="button" id="toggleApiKey" class="toggle-btn">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="help-links">
+                    <p>Need an API key?</p>
+                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" id="openaiLink">
+                        Get OpenAI API Key
+                        <svg class="external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15,3 21,3 21,9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                    </a>
+                    <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" id="geminiLink" style="display: none;">
+                        Get Google Gemini API Key
+                        <svg class="external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15,3 21,3 21,9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <button type="submit" class="submit-btn">Start Using SteamScout</button>
+            </form>
+
+            <p class="privacy-note">
+                Your API key is stored locally and never sent to our servers. It's only used to make requests directly to the AI provider.
+            </p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <h1>SteamScout</h1>
+                    <span class="ai-badge">AI-Powered</span>
+                </div>
+                <button id="settingsBtn" class="settings-btn" title="Change API Key" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="header-subtitle">Discover your next gaming adventure with intelligent AI recommendations</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Popular Games Section -->
+            <section class="popular-section">
+                <h2 class="section-title">
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                    </svg>
+                    Trending on Steam
+                </h2>
+                <div class="games-grid" id="popularGames">
+                    <!-- Popular games will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Search Section -->
+            <section class="search-section">
+                <div class="search-container">
+                    <h2 class="section-title">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        Find Your Perfect Game
+                    </h2>
+                    
+                    <!-- Search Input -->
+                    <div class="search-input-container">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Describe what kind of game you're looking for... (e.g., 'I want a relaxing farming game' or 'Show me fast-paced multiplayer shooters')"
+                            disabled
+                        >
+                        <button id="searchBtn" class="search-btn" disabled>
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <div class="loading-spinner" style="display: none;"></div>
+                        </button>
+                    </div>
+
+                    <!-- Genre Filters -->
+                    <div class="filters-section">
+                        <div class="filters-header">
+                            <button id="toggleFilters" class="filter-toggle" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/>
+                                </svg>
+                                Filter by Genre (<span id="genreCount">0</span> selected)
+                            </button>
+                            <button id="clearFilters" class="clear-btn" style="display: none;">Clear all</button>
+                        </div>
+                        
+                        <div id="genreFilters" class="genre-filters" style="display: none;">
+                            <!-- Genre checkboxes will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div id="apiWarning" class="api-warning">
+                        <p>Please enter your API key to start using AI-powered game recommendations.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Display -->
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <p></p>
+            </div>
+
+            <!-- Search Results -->
+            <section id="searchResults" class="results-section" style="display: none;">
+                <h2 class="section-title">AI Recommended Games</h2>
+                <div class="games-grid" id="resultsGrid">
+                    <!-- Search results will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                    <path d="M12 18h.01"/>
+                </svg>
+                <h3>No games found</h3>
+                <p>Try adjusting your search query or removing some genre filters.</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
 </html>
