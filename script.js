@@ -203,6 +203,7 @@ Please recommend exactly 3 Steam games that match this request. For each game, p
 1. The exact game name as it appears on Steam
 2. A 2-3 sentence description explaining why it fits the request
 3. The main genres from this list: First Person Shooter, Platformer, RPG, Adventure, Sandbox, Horror, Psychological Horror, Relaxing, Online, Story-Based, Puzzle, Strategy, Fighting, Metroidvania, Fast-Paced, Open World, Exploration, Survival, Single-Player, Multiplayer, Indie
+4. The Steam App ID if you know it (the number in the Steam URL)
 
 Respond in this exact JSON format:
 {
@@ -211,12 +212,12 @@ Respond in this exact JSON format:
       "name": "Game Name",
       "description": "2-3 sentence description",
       "genres": ["Genre1", "Genre2"],
-      "steamUrl": "https://store.steampowered.com/app/APPID/Game_Name/"
+      "appId": "123456"
     }
   ]
 }
 
-Only recommend real games that exist on Steam. Make sure the descriptions are engaging and explain why each game fits the user's request.`;
+Only recommend real games that exist on Steam. If you know the Steam App ID, include it. Make sure the descriptions are engaging and explain why each game fits the user's request.`;
 
     const aiResponse = currentProvider === 'openai' ? await callOpenAI(prompt) : await callGemini(prompt);
     const parsedResponse = parseAIResponse(aiResponse);
@@ -226,7 +227,9 @@ Only recommend real games that exist on Steam. Make sure the descriptions are en
         name: game.name,
         description: game.description,
         logo: getGameLogo(game.name),
-        steamUrl: game.steamUrl || `https://store.steampowered.com/search/?term=${encodeURIComponent(game.name)}`,
+        steamUrl: game.appId ? 
+            `https://store.steampowered.com/app/${game.appId}/` : 
+            `https://store.steampowered.com/search/?term=${encodeURIComponent(game.name)}`,
         genres: game.genres
     }));
 }
